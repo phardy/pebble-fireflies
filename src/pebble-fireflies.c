@@ -52,6 +52,8 @@ TextLayer *text_header_layer;
 tinymt32_t rndstate;
 int showing_time = 0;
 
+static bool advance_frame = false;
+
 static const GBitmap* number_bitmaps[10] = { 
   &s_0_bitmap, &s_1_bitmap, &s_2_bitmap, 
   &s_3_bitmap, &s_4_bitmap, &s_5_bitmap,
@@ -268,8 +270,8 @@ unsigned short get_display_hour(unsigned short hour) {
 
 void display_time(struct tm *tick_time) {
   showing_time = 1;
-  unsigned short hour = get_display_hour(tick_time->tm_hour);
-  int min = tick_time->tm_min;
+  unsigned short hour = 8;
+  int min = 15;
 
   //int particles_per_group = NUM_PARTICLES / 2;
 
@@ -326,7 +328,7 @@ void kickoff_display_time() {
   time_t t = time(NULL);
   struct tm *current_time = localtime(&t);
   display_time(current_time);
-  app_timer_register(12000, handle_disperse_timer, NULL);
+  // app_timer_register(12000, handle_disperse_timer, NULL);
 }
 
 void handle_tick(struct tm *now, TimeUnits units_changed) {
@@ -352,6 +354,24 @@ void init_particles() {
                              initial_power);
     particles[i].size = particles[i].goal_size = 0.0F;
   }
+}
+
+void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+  layer_mark_dirty(particle_layer);
+}
+
+void up_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+  swarm_to_a_different_location();
+}
+
+void down_single_click_handler(ClickRecognizerRef recognizer, void *context) {
+  kickoff_display_time();
+}
+
+void config_provider(Window *window) {
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_single_click_handler);
+  window_single_click_subscribe(BUTTON_ID_UP, up_single_click_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_single_click_handler);
 }
 
 void handle_init() {
@@ -384,11 +404,16 @@ void handle_init() {
   layer_set_update_proc(particle_layer, update_particles_layer);
   layer_add_child(window_get_root_layer(window), particle_layer);
 
-  app_timer_register(50, handle_animation_timer, NULL);
+  // app_timer_register(50, handle_animation_timer, NULL);
   app_timer_register(random_in_range(5000, 15000), handle_swarm_timer, NULL);
 
-  tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
-  accel_tap_service_subscribe(handle_tap);
+  // tick_timer_service_subscribe(MINUTE_UNIT, handle_tick);
+  // accel_tap_service_subscribe(handle_tap);
+  window_set_click_config_provider(window, (ClickConfigProvider)config_provider);
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Step mode.");
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Hit Select button to advance through frames.");
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Up button to swarm to a new location.");
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Down button to swarm to time (8:15).");
 }
 
 void handle_deinit() {

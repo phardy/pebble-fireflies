@@ -6,7 +6,7 @@
   "versionCode": 4,
   "versionLabel": "2.1.1",
   "watchapp": {
-    "watchface": true
+    "watchface": false
   },
   "appKeys": {},
   "resources": {
