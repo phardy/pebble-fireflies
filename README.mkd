@@ -19,11 +19,11 @@ return to their natural state.
 
 ## Build Instructions
 
-This fork relies on the beta 2.0 SDK.
+This fork relies on the beta 3.0 SDK.
 
 Clone this repository in an appropriate directory:
 
-	git clone https://github.com/phardy/pebble-fireflies.git
+	git clone https://github.com/larsbuerk/pebble-fireflies.git
 
 Configure and build:
 
