@@ -16,9 +16,34 @@
 #define MAX_SPEED 1.0F
 #define SWARM_SPEED 2.0F
 #define SCREEN_MARGIN 0.0F
-#define JITTER 0.5F
+#define JITTER 0.1F
 #define MAX_SIZE 3.0F
 #define MIN_SIZE 0.0F
+
+
+  #ifdef PBL_COLOR
+  int color_select[NUM_PARTICLES];
+  struct GBitmap *s_0_bitmap;
+  struct GBitmap *s_1_bitmap;
+  struct GBitmap *s_2_bitmap;
+  struct GBitmap *s_3_bitmap;
+  struct GBitmap *s_4_bitmap;
+  struct GBitmap *s_5_bitmap;
+  struct GBitmap *s_6_bitmap;
+  struct GBitmap *s_7_bitmap;
+  struct GBitmap *s_8_bitmap;
+  struct GBitmap *s_9_bitmap;
+  #else
+  static const GBitmap *number_bitmaps[10] = { 
+    &s_0_bitmap, &s_1_bitmap, &s_2_bitmap, 
+    &s_3_bitmap, &s_4_bitmap, &s_5_bitmap,
+    &s_6_bitmap, &s_7_bitmap, &s_8_bitmap, 
+    &s_9_bitmap 
+  };
+  #endif
+
+
+
 
 typedef struct FPoint
 {
@@ -51,13 +76,7 @@ Layer *particle_layer;
 TextLayer *text_header_layer;
 tinymt32_t rndstate;
 int showing_time = 0;
-
-static const GBitmap* number_bitmaps[10] = { 
-  &s_0_bitmap, &s_1_bitmap, &s_2_bitmap, 
-  &s_3_bitmap, &s_4_bitmap, &s_5_bitmap,
-  &s_6_bitmap, &s_7_bitmap, &s_8_bitmap, 
-  &s_9_bitmap 
-};
+int color = 0;
 
 int random_in_range(int min, int max) {
   return min + (int)(tinymt32_generate_float01(&rndstate) * ((max - min) + 1));
@@ -145,8 +164,34 @@ void draw_particle(GContext* ctx, int i) {
 
 void update_particles_layer(Layer *me, GContext* ctx) {
   (void)me;
-  graphics_context_set_fill_color(ctx, GColorWhite);
+  #ifdef PBL_COLOR
+     int colorchange = random_in_range(0, NUM_PARTICLES);
+  #else
+  #endif
   for(int i=0;i<NUM_PARTICLES;i++) {
+  #ifdef PBL_COLOR
+     if (colorchange == i)
+     {
+     if (color_select[i] == 1)
+     {
+     color_select[i] = 0;
+     }
+     else{
+     color_select[i] = 1;    
+     }
+     }
+     if (color_select[i] == 0)
+     {
+     graphics_context_set_fill_color(ctx, GColorBabyBlueEyes);
+     }
+     else
+     {
+     graphics_context_set_fill_color(ctx, GColorMalachite);  
+     }
+
+  #else
+    graphics_context_set_fill_color(ctx, GColorWhite);
+  #endif
     update_particle(i);
     draw_particle(ctx, i);
   }
@@ -215,15 +260,50 @@ void swarm_to_digit(int digit, int start_idx, int end_idx, int offset_x, int off
 
   for(int i=start_idx; i<end; i++) {
 
-    GBitmap bitmap   = *number_bitmaps[digit];
+
+  #ifdef PBL_COLOR
+  	struct GBitmap *bitmap;
+	switch (digit) {
+		case 0: bitmap = s_0_bitmap; break;
+		case 1: bitmap = s_1_bitmap; break;
+		case 2: bitmap = s_2_bitmap; break;
+		case 3: bitmap = s_3_bitmap; break;
+		case 4: bitmap = s_4_bitmap; break;
+		case 5: bitmap = s_5_bitmap; break;
+		case 6: bitmap = s_6_bitmap; break;
+		case 7: bitmap = s_7_bitmap; break;
+		case 8: bitmap = s_8_bitmap; break;
+		case 9: bitmap = s_9_bitmap; break;
+		default: bitmap = s_0_bitmap; break;
+	}
+  #else
+  GBitmap bitmap   = *number_bitmaps[digit];
+  #endif
+     	
+  #ifdef PBL_COLOR
+    uint8_t *pixels = gbitmap_get_data(bitmap); 
+  #else
     const uint8_t *pixels = bitmap.addr;
+  #endif
+
+
+
 
     // pick a random point in the four image
     // get the image
     // pick a random number the length of the array
     // if the value is zero, pick a differnet number increment until you get there
     // move to that position
-    int image_length = bitmap.row_size_bytes * bitmap.bounds.size.h - 1;
+
+  #ifdef PBL_COLOR
+      int hight = gbitmap_get_bounds(bitmap).size.h - 1;
+      int length = gbitmap_get_bytes_per_row(bitmap);
+      int image_length = length * hight;
+  #else
+      int image_length = bitmap.row_size_bytes * bitmap.bounds.size.h - 1;
+  #endif
+
+
     int idx = random_in_range(0, image_length);
     uint8_t pixel = pixels[idx];
 
@@ -244,8 +324,14 @@ void swarm_to_digit(int digit, int start_idx, int end_idx, int offset_x, int off
     }
     bit_pos += bit_add;
 
+    #ifdef PBL_COLOR
+      int row_size_bits = gbitmap_get_bytes_per_row(bitmap) * 8;
+    #else
+      int row_size_bits = bitmap.row_size_bytes * 8;
+    #endif
     
-    int row_size_bits = bitmap.row_size_bytes * 8;
+
+
     int pixel_row = bit_pos / row_size_bits;
     int pixel_col = bit_pos % row_size_bits;
 
@@ -326,7 +412,7 @@ void kickoff_display_time() {
   time_t t = time(NULL);
   struct tm *current_time = localtime(&t);
   display_time(current_time);
-  app_timer_register(12000, handle_disperse_timer, NULL);
+  app_timer_register(40000, handle_disperse_timer, NULL);
 }
 
 void handle_tick(struct tm *now, TimeUnits units_changed) {
@@ -355,13 +441,73 @@ void init_particles() {
 }
 
 void handle_init() {
+  #ifdef PBL_COLOR
+  int inv = 0;
+  for (int o = 0; o < NUM_PARTICLES ;o++)
+  {
+     inv = o % 2;
+     if (inv > 0)
+     {
+	color_select[o] = 1;
+     }
+     else
+     {
+	color_select[o] = 0;
+     }
+  }
+
+  s_0_bitmap = gbitmap_create_with_data(s_0_pixels);
+  s_1_bitmap = gbitmap_create_with_data(s_1_pixels);
+  s_2_bitmap = gbitmap_create_with_data(s_2_pixels);
+  s_3_bitmap = gbitmap_create_with_data(s_3_pixels);
+  s_4_bitmap = gbitmap_create_with_data(s_4_pixels);
+  s_5_bitmap = gbitmap_create_with_data(s_5_pixels);
+  s_6_bitmap = gbitmap_create_with_data(s_6_pixels);
+  s_7_bitmap = gbitmap_create_with_data(s_7_pixels);
+  s_8_bitmap = gbitmap_create_with_data(s_8_pixels);
+  s_9_bitmap = gbitmap_create_with_data(s_9_pixels);
+  
+  gbitmap_set_data(s_0_bitmap, s_0_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_1_bitmap, s_1_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_2_bitmap, s_2_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_3_bitmap, s_3_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_4_bitmap, s_4_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_5_bitmap, s_5_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_6_bitmap, s_6_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_7_bitmap, s_7_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_8_bitmap, s_8_pixels, GBitmapFormat1Bit, 4, 0);
+  gbitmap_set_data(s_9_bitmap, s_9_pixels, GBitmapFormat1Bit, 4, 0);
+
+  gbitmap_set_bounds(s_0_bitmap, GRect(0, 0, 24, 38));
+  gbitmap_set_bounds(s_1_bitmap, GRect(0, 0, 13, 36));
+  gbitmap_set_bounds(s_2_bitmap, GRect(0, 0, 24, 37));
+  gbitmap_set_bounds(s_3_bitmap, GRect(0, 0, 23, 38));
+  gbitmap_set_bounds(s_4_bitmap, GRect(0, 0, 27, 36));
+  gbitmap_set_bounds(s_5_bitmap, GRect(0, 0, 22, 37));
+  gbitmap_set_bounds(s_6_bitmap, GRect(0, 0, 23, 38));
+  gbitmap_set_bounds(s_7_bitmap, GRect(0, 0, 24, 36));
+  gbitmap_set_bounds(s_8_bitmap, GRect(0, 0, 24, 38));
+  gbitmap_set_bounds(s_9_bitmap, GRect(0, 0, 24, 38));
+  #else
+
+  #endif
+
+
   uint32_t seed = 4;
   tinymt32_init(&rndstate, seed);
 
   window = window_create();
-  window_set_fullscreen(window, true);
+  //window_set_fullscreen(window, true);
   window_stack_push(window, true /* Animated */);
-  window_set_background_color(window, GColorBlack);
+
+  #ifdef PBL_COLOR
+   window_set_background_color(window, GColorBlack);
+  #else
+    window_set_background_color(window, GColorBlack);
+  #endif
+
+
+
 
   // resource_init_current_app(&APP_RESOURCES);
 

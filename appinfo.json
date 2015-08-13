@@ -3,20 +3,19 @@
   "shortName": "Fireflies",
   "longName": "Fireflies",
   "companyName": "Little Hiccup",
-  "versionCode": 3,
-  "versionLabel": "2.1.0",
+  "versionCode": 5,
+  "versionLabel": "3.0",
   "watchapp": {
     "watchface": true
   },
   "appKeys": {},
   "resources": {
     "media": [
-      {
-        "menuIcon": true,
-        "type": "png",
-        "name": "IMAGE_MENU_ICON",
-        "file": "images/appicon.png"
-      }
     ]
-  }
+  },
+  "targetPlatforms": [
+    "aplite",
+    "basalt"
+  ],
+  "sdkVersion": "3"
 }
